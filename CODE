@@ -1,0 +1,36 @@
+# SMTP Configuration
+$smtpServer = "smtp.gmail.com"  # Change for your email provider
+$fromEmail = "------"  # Your email
+$toEmail = "------------"  # Where alerts are sent
+$secureCredential = --------   # Enter your email credentials securely
+
+# Log File Configuration
+$logFile = "C:\SecurityLogs\IncidentReport.log"
+Write-Host "Monitoring System for Security Events..."
+
+# Event Log Monitoring: Check for failed logins (Event ID 4625)
+$events = Get-WinEvent -FilterHashtable @{LogName='Security'; ID=4625} -MaxEvents 5
+
+if ($events) {
+    # Log each event and send email alerts
+    foreach ($event in $events) {
+        $logEntry = "Suspicious Login Detected: $($event.Message)"
+        Add-Content -Path $logFile -Value $logEntry
+
+        # Send Email Alert
+        $subject = "Security Alert: Failed Login Attempt"
+        $body = $logEntry
+        Send-MailMessage -SmtpServer $smtpServer -Credential $secureCredential `
+            -From $fromEmail -To $toEmail -Subject $subject -Body $body
+    }
+}
+
+# Optional: Disable Suspicious User
+$suspiciousUser = "-------"  # Replace with the username to disable
+if ($events.Count -ge 3) {
+    Write-Host "Critical: Multiple failed logins detected for user $suspiciousUser!"
+    Disable-LocalUser -Name $suspiciousUser
+    Write-Host "User $suspiciousUser disabled for security."
+}
+
+Write-Host "Incident Response Monitoring Complete."
